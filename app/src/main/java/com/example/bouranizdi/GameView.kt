@@ -153,10 +153,11 @@ class GameView(
         repeat(steps) { updateBallStep(stepDt) }
     }
 
-    /** Jeden malý krok míčku: pohyb, odrazy od stěn, kontrola pádu pod spodní okraj. */
+    /** Jeden malý krok míčku: pohyb, odrazy od stěn a pálky, kontrola pádu pod spodní okraj. */
     private fun updateBallStep(dt: Float) {
         ball.move(dt)
         ball.checkWallCollision(screenWidth.toFloat())
+        ball.checkPaddleCollision(paddle)
         if (ball.isBelowBottom(screenHeight.toFloat())) resetBall()
     }
 

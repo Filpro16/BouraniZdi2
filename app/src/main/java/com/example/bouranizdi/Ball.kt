@@ -7,6 +7,7 @@ import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 /**
  * Míček. Poloměr a rychlost jsou relativní k velikosti obrazovky.
@@ -23,6 +24,9 @@ class Ball(screenWidth: Float, screenHeight: Float) {
 
         /** Úhel odpalu od svislice ve stupních (kladný = doprava). */
         const val LAUNCH_ANGLE_DEG = 20f
+
+        /** Největší úhel odrazu od svislice ve stupních (při dopadu na úplný kraj pálky). */
+        const val MAX_BOUNCE_ANGLE_DEG = 60f
 
         /** Barva míčku. */
         const val COLOR = Color.WHITE
@@ -83,6 +87,24 @@ class Ball(screenWidth: Float, screenHeight: Float) {
         }
     }
 
+    /**
+     * Odrazí míček od pálky, pokud do ní narazil shora (míček letí dolů a jeho střed je nad spodní hranou pálky).
+     * Úhel odrazu závisí na místě dopadu: střed pálky = kolmo nahoru, kraj = až [MAX_BOUNCE_ANGLE_DEG].
+     * Rychlost míčku se nemění. Vrací true, když k odrazu došlo.
+     */
+    fun checkPaddleCollision(paddle: Paddle): Boolean {
+        if (vy <= 0f || y > paddle.y + paddle.height) return false
+        val hit = circleIntersectsRect(x, y, radius, paddle.x, paddle.y, paddle.x + paddle.width, paddle.y + paddle.height)
+        if (!hit) return false
+        val offset = paddleHitOffset(x, paddle.x, paddle.width)
+        val maxAngle = Math.toRadians(MAX_BOUNCE_ANGLE_DEG.toDouble()).toFloat()
+        val angle = offset * maxAngle
+        vx = speed * sin(angle)
+        vy = -speed * cos(angle)
+        y = paddle.y - radius
+        return true
+    }
+
     /** True, když míček celý propadl pod spodní okraj obrazovky. */
     fun isBelowBottom(screenHeight: Float): Boolean = y - radius > screenHeight
 
@@ -99,4 +121,24 @@ class Ball(screenWidth: Float, screenHeight: Float) {
 fun substepCount(distance: Float, maxStep: Float): Int {
     if (maxStep <= 0f) return 1
     return ceil(distance / maxStep).toInt().coerceAtLeast(1)
+}
+
+/**
+ * Kam míček dopadl na pálku: -1 = levý kraj, 0 = střed, 1 = pravý kraj.
+ * Dopad těsně za krajem (míček přesahuje pálku) se omezí na -1 / 1.
+ */
+fun paddleHitOffset(ballX: Float, paddleX: Float, paddleWidth: Float): Float {
+    val halfWidth = paddleWidth / 2f
+    val center = paddleX + halfWidth
+    return ((ballX - center) / halfWidth).coerceIn(-1f, 1f)
+}
+
+/** True, když se kruh (střed cx, cy, poloměr r) překrývá s obdélníkem. */
+fun circleIntersectsRect(cx: Float, cy: Float, r: Float, left: Float, top: Float, right: Float, bottom: Float): Boolean {
+    // Nejbližší bod obdélníku ke středu kruhu
+    val nearestX = cx.coerceIn(left, right)
+    val nearestY = cy.coerceIn(top, bottom)
+    val dx = cx - nearestX
+    val dy = cy - nearestY
+    return sqrt(dx * dx + dy * dy) <= r
 }

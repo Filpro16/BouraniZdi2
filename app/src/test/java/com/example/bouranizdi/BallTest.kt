@@ -120,3 +120,95 @@ class BallTest {
         assertEquals(1, substepCount(25f, 0f))
     }
 }
+
+/** Testy odrazu míčku od pálky. */
+class BallPaddleTest {
+
+    private val screenW = 1000f
+    private val screenH = 2000f
+    private val paddle = Paddle(screenW, screenH)
+    private val centerX = paddle.x + paddle.width / 2f
+
+    /** Míček letící dolů, který se právě dotýká horní hrany pálky v bodě x. */
+    private fun fallingBallTouchingPaddleAt(x: Float) = Ball(screenW, screenH).also {
+        it.x = x; it.y = paddle.y - it.radius + 1f; it.vx = 0f; it.vy = it.speed
+    }
+
+    private fun speedOf(ball: Ball) = kotlin.math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy)
+
+    @Test
+    fun hitCenter_bouncesStraightUp() {
+        val ball = fallingBallTouchingPaddleAt(centerX)
+        assertTrue(ball.checkPaddleCollision(paddle))
+        assertEquals(0f, ball.vx, 1e-3f)
+        assertEquals(-ball.speed, ball.vy, 1e-3f)
+        assertEquals(paddle.y - ball.radius, ball.y, 1e-4f)
+    }
+
+    @Test
+    fun hitRightSide_bouncesRight_hitLeftSide_bouncesLeft() {
+        val right = fallingBallTouchingPaddleAt(centerX + paddle.width / 4f)
+        val left = fallingBallTouchingPaddleAt(centerX - paddle.width / 4f)
+        right.checkPaddleCollision(paddle)
+        left.checkPaddleCollision(paddle)
+        assertTrue(right.vx > 0f && right.vy < 0f)
+        assertTrue(left.vx < 0f && left.vy < 0f)
+        assertEquals(right.vx, -left.vx, 1e-3f)
+    }
+
+    @Test
+    fun hitEdge_bouncesAtMaxAngle_andKeepsSpeed() {
+        val ball = fallingBallTouchingPaddleAt(paddle.x + paddle.width)
+        ball.checkPaddleCollision(paddle)
+        val angle = Math.toDegrees(kotlin.math.atan2(ball.vx, -ball.vy).toDouble())
+        assertEquals(Ball.MAX_BOUNCE_ANGLE_DEG.toDouble(), angle, 1e-2)
+        assertEquals(ball.speed, speedOf(ball), 1e-2f)
+    }
+
+    @Test
+    fun hitJustPastEdge_stillBounces_angleClamped() {
+        // Střed míčku je mimo pálku, ale okraj míčku se jí dotkne.
+        val ball = fallingBallTouchingPaddleAt(paddle.x - 5f)
+        assertTrue(ball.checkPaddleCollision(paddle))
+        val angle = Math.toDegrees(kotlin.math.atan2(ball.vx, -ball.vy).toDouble())
+        assertEquals(-Ball.MAX_BOUNCE_ANGLE_DEG.toDouble(), angle, 1e-2)
+    }
+
+    @Test
+    fun ballMovingUp_isIgnored() {
+        val ball = fallingBallTouchingPaddleAt(centerX).also { it.vy = -it.speed }
+        assertFalse(ball.checkPaddleCollision(paddle))
+        assertEquals(-ball.speed, ball.vy, 0f)
+    }
+
+    @Test
+    fun ballMissingPaddle_isIgnored() {
+        val ball = fallingBallTouchingPaddleAt(paddle.x - 100f)
+        assertFalse(ball.checkPaddleCollision(paddle))
+    }
+
+    @Test
+    fun ballAlreadyBelowPaddle_isNotRescued() {
+        val ball = fallingBallTouchingPaddleAt(centerX).also { it.y = paddle.y + paddle.height + 2f }
+        assertFalse(ball.checkPaddleCollision(paddle))
+    }
+
+    @Test
+    fun paddleHitOffset_mapsPositionToMinusOneOne() {
+        assertEquals(0f, paddleHitOffset(150f, 100f, 100f), 1e-4f)
+        assertEquals(-1f, paddleHitOffset(100f, 100f, 100f), 1e-4f)
+        assertEquals(1f, paddleHitOffset(200f, 100f, 100f), 1e-4f)
+        assertEquals(0.5f, paddleHitOffset(175f, 100f, 100f), 1e-4f)
+        assertEquals(1f, paddleHitOffset(260f, 100f, 100f), 1e-4f)
+    }
+
+    @Test
+    fun circleIntersectsRect_cases() {
+        // uvnitř, dotyk hranou, mimo, mimo u rohu (diagonálně), dotyk rohem
+        assertTrue(circleIntersectsRect(50f, 50f, 5f, 0f, 0f, 100f, 100f))
+        assertTrue(circleIntersectsRect(105f, 50f, 5f, 0f, 0f, 100f, 100f))
+        assertFalse(circleIntersectsRect(106f, 50f, 5f, 0f, 0f, 100f, 100f))
+        assertFalse(circleIntersectsRect(104f, 104f, 5f, 0f, 0f, 100f, 100f))
+        assertTrue(circleIntersectsRect(103f, 103f, 5f, 0f, 0f, 100f, 100f))
+    }
+}
