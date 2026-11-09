@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.PixelFormat
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 
@@ -44,6 +45,9 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     init {
         holder.addCallback(this)
+        // Výchozí formát SurfaceView je 16bitový RGB_565, který se na některých
+        // zařízeních / emulátorech zobrazí jako černá plocha. 32bitový formát funguje všude.
+        holder.setFormat(PixelFormat.RGBA_8888)
     }
 
     // ---------- Řízení životního cyklu (volá MainActivity) ----------
