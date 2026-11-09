@@ -48,6 +48,7 @@ class GameView(
     /** Herní objekty; vzniknou v createGameObjects(), až známe rozměry obrazovky. */
     private lateinit var paddle: Paddle
     private lateinit var ball: Ball
+    private lateinit var blocks: List<Block>
 
     /** Aktuální odhad FPS pro ladicí výpis. */
     private var fps = 0f
@@ -132,6 +133,7 @@ class GameView(
         textPaint.textSize = width * FPS_TEXT_SIZE_RATIO
         paddle = Paddle(width.toFloat(), height.toFloat())
         ball = Ball(width.toFloat(), height.toFloat())
+        blocks = createBlockGrid(width.toFloat(), height.toFloat())
         resetBall()
     }
 
@@ -153,12 +155,19 @@ class GameView(
         repeat(steps) { updateBallStep(stepDt) }
     }
 
-    /** Jeden malý krok míčku: pohyb, odrazy od stěn a pálky, kontrola pádu pod spodní okraj. */
+    /** Jeden malý krok míčku: pohyb, odrazy od stěn, pálky a bloků, kontrola pádu pod spodní okraj. */
     private fun updateBallStep(dt: Float) {
         ball.move(dt)
         ball.checkWallCollision(screenWidth.toFloat())
         ball.checkPaddleCollision(paddle)
+        checkBlockCollisions()
         if (ball.isBelowBottom(screenHeight.toFloat())) resetBall()
+    }
+
+    /** Zničí první blok, do kterého míček narazil (v jednom kroku nejvýš jeden, aby se odraz nezrušil dvojím otočením). */
+    private fun checkBlockCollisions() {
+        val hitBlock = blocks.firstOrNull { ball.checkBlockCollision(it) } ?: return
+        hitBlock.destroy()
     }
 
     /** Vyhlazený odhad FPS z délky snímku. */
@@ -177,8 +186,14 @@ class GameView(
 
     /** Vykreslí herní objekty. */
     private fun drawObjects(canvas: Canvas) {
+        drawBlocks(canvas)
         paddle.draw(canvas)
         ball.draw(canvas)
+    }
+
+    /** Vykreslí všechny bloky (zničené se samy přeskočí). */
+    private fun drawBlocks(canvas: Canvas) {
+        for (block in blocks) block.draw(canvas)
     }
 
     /** Vypíše FPS do levého horního rohu. */

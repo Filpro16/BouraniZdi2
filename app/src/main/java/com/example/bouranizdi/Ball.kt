@@ -6,6 +6,7 @@ import android.graphics.Paint
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.cos
+import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -102,6 +103,22 @@ class Ball(screenWidth: Float, screenHeight: Float) {
         vx = speed * sin(angle)
         vy = -speed * cos(angle)
         y = paddle.y - radius
+        return true
+    }
+
+    /**
+     * Odrazí míček od živého bloku, pokud se ho dotýká. Vrací true, když k zásahu došlo
+     * (blok samotný nezničí – to řeší volající).
+     * Strana odrazu se pozná podle toho, ve které ose míček do bloku zajel méně:
+     * menší překryv v ose x = náraz z boku, v ose y = náraz shora / zespodu, stejný = roh (odraz v obou osách).
+     */
+    fun checkBlockCollision(block: Block): Boolean {
+        if (!block.isAlive) return false
+        if (!circleIntersectsRect(x, y, radius, block.left, block.top, block.right, block.bottom)) return false
+        val overlapX = min(x + radius - block.left, block.right - (x - radius))
+        val overlapY = min(y + radius - block.top, block.bottom - (y - radius))
+        if (overlapX <= overlapY) vx = if (x < block.centerX) -abs(vx) else abs(vx)
+        if (overlapY <= overlapX) vy = if (y < block.centerY) -abs(vy) else abs(vy)
         return true
     }
 
