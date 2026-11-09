@@ -11,22 +11,26 @@ import androidx.core.view.WindowInsetsControllerCompat
 class MainActivity : AppCompatActivity() {
 
     private lateinit var gameView: GameView
+    private lateinit var tiltController: TiltController
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        gameView = GameView(this)
+        tiltController = TiltController(this)
+        gameView = GameView(this, tiltController)
         setContentView(gameView)
         hideSystemBars()
     }
 
     override fun onResume() {
         super.onResume()
+        tiltController.start()
         gameView.resume()
     }
 
     override fun onPause() {
         gameView.pause()
+        tiltController.stop()
         super.onPause()
     }
 

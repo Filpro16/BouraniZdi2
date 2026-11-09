@@ -12,7 +12,10 @@ import android.view.SurfaceView
  * Herní plocha: SurfaceView s vlastním vláknem herní smyčky.
  * Smyčka opakuje update (posun herních objektů o delta time) a draw (vykreslení na Canvas).
  */
-class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback {
+class GameView(
+    context: Context,
+    private val tiltController: TiltController
+) : SurfaceView(context), SurfaceHolder.Callback {
 
     companion object {
         /** Barva pozadí herní plochy. */
@@ -34,6 +37,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     /** Rozměry plochy v pixelech (nastaví se v surfaceChanged). */
     private var screenWidth = 0
     private var screenHeight = 0
+
+    /** Pálka; vznikne, až známe rozměry obrazovky (surfaceChanged). */
+    @Volatile
+    private var paddle: Paddle? = null
 
     /** Aktuální odhad FPS pro ladicí výpis. */
     private var fps = 0f
@@ -85,6 +92,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         screenWidth = width
         screenHeight = height
         textPaint.textSize = width * FPS_TEXT_SIZE_RATIO
+        paddle = Paddle(width.toFloat(), height.toFloat())
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
@@ -94,9 +102,15 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
     // ---------- Herní logika ----------
 
-    /** Posune hru o dt sekund. Zatím jen aktualizuje FPS. */
+    /** Posune hru o dt sekund. */
     private fun update(dt: Float) {
         updateFps(dt)
+        movePaddle(dt)
+    }
+
+    /** Posune pálku podle aktuálního náklonu telefonu. */
+    private fun movePaddle(dt: Float) {
+        paddle?.move(tiltController.tilt, dt)
     }
 
     /** Vyhlazený odhad FPS z délky snímku. */
@@ -109,6 +123,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
     /** Vykreslí celý snímek. */
     private fun drawGame(canvas: Canvas) {
         canvas.drawColor(BACKGROUND_COLOR)
+        paddle?.draw(canvas)
         if (SHOW_FPS) drawFps(canvas)
     }
 
